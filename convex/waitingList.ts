@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { query } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { WAITING_LIST_STATUS } from "./constants";
 
 export const getQueuePosition = query({
@@ -17,5 +17,45 @@ export const getQueuePosition = query({
       .first();
 
     if (!entry) return null;
+
+    const peopleAhead = await ctx.db
+      .query("waitingList")
+      .withIndex("by_event_status", (q) => q.eq("eventId", eventId))
+      .filter((q) =>
+        q.and(
+          q.lt(q.field("_creationTime"), entry?._creationTime),
+          q.or(
+            q.eq(q.field("status"), WAITING_LIST_STATUS.WAITING),
+            q.eq(q.field("status"), WAITING_LIST_STATUS.OFFERED)
+          )
+        )
+      )
+      .collect()
+      .then((entries) => entries.length);
+
+    return {
+      ...entry,
+      position: peopleAhead + 1,
+    };
+  },
+});
+
+export const releaseTicket = mutation({
+  args: {
+    eventId: v.id("events"),
+    waitingListId: v.id("waitingList"),
+  },
+  handler: async (ctx, { eventId, waitingListId }) => {
+    const entry = await ctx.db.get(waitingListId);
+    if (!entry || entry.status !== WAITING_LIST_STATUS.OFFERED) {
+      throw new Error("No valid ticket offer found");
+    }
+
+    await ctx.db.patch(waitingListId, {
+      status: WAITING_LIST_STATUS.EXPIRED,
+    });
+
+    // Process queue to offer ticket to next person
+    // await processQueue(ctx, { eventId });
   },
 });
