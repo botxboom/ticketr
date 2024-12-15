@@ -19,7 +19,9 @@ function SyncUserWithConvex() {
           email: user.emailAddresses[0].emailAddress ?? "",
           userId: user.id,
         });
-      } catch (e) {}
+      } catch (e) {
+        console.log(e);
+      }
     };
 
     syncUser();

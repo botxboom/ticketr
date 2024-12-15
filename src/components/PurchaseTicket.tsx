@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { Ticket } from "lucide-react";
@@ -10,7 +9,6 @@ import { api } from "../../convex/_generated/api";
 import ReleaseTicket from "./ReleaseTicket";
 
 export default function PurchaseTicket({ eventId }: { eventId: Id<"events"> }) {
-  const router = useRouter();
   const { user } = useUser();
   const queuePosition = useQuery(api.waitingList.getQueuePosition, {
     eventId,
