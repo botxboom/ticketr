@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { DURATIONS, TICKET_STATUS, WAITING_LIST_STATUS } from "./constants";
+import { internal } from "./_generated/api";
 
 export type Metrics = {
   soldTickets: number;
@@ -17,6 +18,66 @@ export type Metrics = {
 //     period: 30 * MINUTE, // in 30 minutes
 //   },
 // });
+
+export const create = mutation({
+  args: {
+    name: v.string(),
+    description: v.string(),
+    location: v.string(),
+    eventDate: v.number(),
+    price: v.number(),
+    totalTickets: v.number(),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const eventId = await ctx.db.insert("events", {
+      name: args.name,
+      description: args.description,
+      location: args.location,
+      eventDate: args.eventDate,
+      price: args.price,
+      totalTickets: args.totalTickets,
+      userId: args.userId,
+    });
+
+    return eventId;
+  },
+});
+
+export const updateEvent = mutation({
+  args: {
+    eventId: v.id("events"),
+    name: v.string(),
+    description: v.string(),
+    location: v.string(),
+    eventDate: v.number(),
+    price: v.number(),
+    totalTickets: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const { eventId, ...updates } = args;
+
+    const event = await ctx.db.get(eventId);
+    if (!event) throw new Error("Event not found");
+
+    const soldTickets = await ctx.db
+      .query("tickets")
+      .withIndex("by_event", (q) => q.eq("eventId", eventId))
+      .filter((q) =>
+        q.or(q.eq(q.field("status"), "valid"), q.eq(q.field("status"), "used"))
+      )
+      .collect();
+
+    if (updates.totalTickets < soldTickets.length) {
+      throw new Error(
+        `Cannot reduce total tickets below ${soldTickets.length} (number of tickets already sold)`
+      );
+    }
+
+    await ctx.db.patch(eventId, updates);
+    return eventId;
+  },
+});
 
 export const get = query({
   args: {},
@@ -132,14 +193,14 @@ export const joinWaitingList = mutation({
   args: { eventId: v.id("events"), userId: v.string() },
   handler: async (ctx, { eventId, userId }) => {
     // Rate limit check
-    const status = await rateLimiter.limit(ctx, "queueJoin", { key: userId });
-    if (!status.ok) {
-      throw new ConvexError(
-        `You've joined the waiting list too many times. Please wait ${Math.ceil(
-          status.retryAfter / (60 * 1000)
-        )} minutes before trying again.`
-      );
-    }
+    // const status = await rateLimiter.limit(ctx, "queueJoin", { key: userId });
+    // if (!status.ok) {
+    //   throw new ConvexError(
+    //     `You've joined the waiting list too many times. Please wait ${Math.ceil(
+    //       status.retryAfter / (60 * 1000)
+    //     )} minutes before trying again.`
+    //   );
+    // }
 
     // First check if user already has an active entry in waiting list for this event
     // Active means any status except EXPIRED
@@ -199,7 +260,7 @@ export const joinWaitingList = mutation({
         ? WAITING_LIST_STATUS.OFFERED // If available, status is offered
         : WAITING_LIST_STATUS.WAITING, // If not available, status is waiting
       message: available
-        ? "Ticket offered - you have 15 minutes to purchase"
+        ? `Ticket offered - you have ${DURATIONS.TICKET_OFFER / (60 * 1000)} minutes to purchase`
         : "Added to waiting list - you'll be notified when a ticket becomes available",
     };
   },

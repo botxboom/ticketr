@@ -11,6 +11,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Id } from "../../../../convex/_generated/dataModel";
 import { api } from "../../../../convex/_generated/api";
+import JoinQueue from "@/components/JoinQueue";
 
 export default function EventPage() {
   const { user } = useUser();
@@ -116,11 +117,10 @@ export default function EventPage() {
                   <EventCard eventId={params.id as Id<"events">} />
 
                   {user ? (
-                    // <JoinQueue
-                    //   eventId={params.id as Id<"events">}
-                    //   userId={user.id}
-                    // />
-                    <></>
+                    <JoinQueue
+                      eventId={params.id as Id<"events">}
+                      userId={user.id}
+                    />
                   ) : (
                     <SignInButton>
                       <Button className="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg">

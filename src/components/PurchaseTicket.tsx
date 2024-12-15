@@ -7,6 +7,7 @@ import { useQuery } from "convex/react";
 import { Ticket } from "lucide-react";
 import { Id } from "../../convex/_generated/dataModel";
 import { api } from "../../convex/_generated/api";
+import ReleaseTicket from "./ReleaseTicket";
 
 export default function PurchaseTicket({ eventId }: { eventId: Id<"events"> }) {
   const router = useRouter();
@@ -109,7 +110,7 @@ export default function PurchaseTicket({ eventId }: { eventId: Id<"events"> }) {
         </button>
 
         <div className="mt-4">
-          {/* <ReleaseTicket eventId={eventId} waitingListId={queuePosition._id} /> */}
+          <ReleaseTicket eventId={eventId} waitingListId={queuePosition._id} />
         </div>
       </div>
     </div>
