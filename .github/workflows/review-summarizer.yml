@@ -19,7 +19,7 @@ jobs:
           node-version: 18
 
       - name: Install dependencies
-        run: npm install
+        run: pnpm install
       - name: Run summarizer script
         run: node .github/scripts/collect-reviews.js
         env:
